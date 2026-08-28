@@ -19,9 +19,9 @@ A big problem developing this demo revealed that the engine did not support some
 
 So the engine needed a dynamic geometry and variable set change api.
 
-## Whats required?
+## What is required?
 
-Initially I wanted to render multiple objects with the same shader. That was only possible by using the configure api. So the solution would be to extend the api by some dynamics. But lets just see how everything is linked together:
+It is required to render multiple objects with the same shader. Multiple objects means multiple geometries and each with its own variable set, so that geometry can be placed in the scene. Lets just see how those parts are linked together:
 
 ![Relation](/assets/images/msl_renderobj_relation01.png)
 
@@ -33,11 +33,11 @@ Initially I wanted to render multiple objects with the same shader. That was onl
 
 **Variable Set:** A Variable Set allows the user to specify shader variables which can be changed during application run-time. So any shader variable can be changed using this interface.
 
-The problem now was that if a msl object was desired to be used for multiple objects, e.g. a depth pass shader or a shadow pass shader, that shader needed to be configured multiple times. There was no possibility for the user to reuse a shader. Yes thats true. Originally, the design wasn't to render 3d scenes dynamically. Now it is and the engine needed support that feature.
+The problem now was that if a msl object was desired to be used for multiple objects, that shader needed to be configured multiple times. There was no possibility for the user to reuse a shader. Yes thats true. Originally, the design wasn't to render 3d scenes dynamically. Now it is and the engine needed support that feature. For example, a depth pass shader(pre-z) renders all the objects currently in the view region into the depth buffer. All those objects are not initialzied with any depth pass shader. The depth pass shader is provided by the engine and just renders the geometric objects' depth values into the depth buffer. So the engine needs to inject objects into msl objects during run-time by linking geometry and supply a variable set.
 
 Because I implemented all the backends one or two year back, it took some time to change the various places in the code to allow for dynamic objects in the msl/render objects. 
 
-Now it is possible to dynamically link a new geometry or a new variable set and the backend will recognice the new data and react accordingly, so the new objects' ids can be used for rendering.
+Now it is possible to dynamically link a new geometry or a new variable set and the backend will recognize the new data and react accordingly, so the new object ids can be used for rendering.
 
 # Why is this important?
 
@@ -45,10 +45,18 @@ Using just one msl for shadow or depth passes is very efficient. Every time a ne
 
 Anyways, I can not go into further detail because it is very complex and this post would be very long nobody would read anyways. The puzzly will form into a broader picture later down the blog path. 
 
-It is also important because it just shows that the engine can initialze and release cycle through graphics objects without crash and with correcty display. It is very important to not leave any leaks after cleanup. 
+It is also important because it just shows that the engine can initialze and release cycle through graphics objects without crash and with correctly display. It is very important to not leave any leaks after cleanup. 
 
-# Backends
+# Conclusion
 
 At the moment of writing, only the D3D11 backend was modified to support that feature. This feature also revealed more inefficiencies in the backend and lead me to fix some leaks too. 
 
-Another big time eater was the missed assignment of default values. msl supports assignment of default value to shader varialbes. Those defaults are set in the backend when the shader was compiled. Because of the old behaviour, defaults where assigned after the shader was complied, but with dynamic varialbe sets, the default values actually need to be assigned when the new variable set realized in the backend even if there is no shader recompilation.
+Another big time eater was the missed assignment of default values. msl supports assignment of default values to shader variables. Those defaults are set in the backend when the shader is compiled. Because of the old behaviour, defaults where assigned after the shader was complied, but with dynamic varialbe sets, the default values actually need to be assigned when the new variable set realized in the backend even if there is no shader recompilation.
+
+What really helped was to have the [test suites](https://github.com/aconstlink/motor_suites) where I implemented and tested the new feature. In there it is possible to go really low on engine level and test things out.
+
+During implementation of the new feature, I realized there need to be some cleanup and refactoring in the engine. I even forgot about that I removed the frame based async rendering. I remember I did it because shader variables could not easily be sent on the proper time point before rendering. This feature needs to be reimplemented. With this flaw also comes shader variable management. Those need to be packed more densly for GPU transmission.
+
+Also it took too long to implement the dynamic geometry and varialbe set feature because of me interatively implementing the engine. The code "grows" and many features should not be like they are. 
+
+Rendering also became too lazy. Too many things are checked with a render call. That needs to be refactored too. The rendering api needs to be more finely grained so things like linking geometry or adding new variable sets can be done separatly before anythings is rendered or when an object is prepared for rendering without an expensive configure call.
