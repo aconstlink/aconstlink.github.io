@@ -60,3 +60,9 @@ During implementation of the new feature, I realized there need to be some clean
 Also it took too long to implement the dynamic geometry and varialbe set feature because of me interatively implementing the engine. The code "grows" and many features should not be like they are. 
 
 Rendering also became too lazy. Too many things are checked with a render call. That needs to be refactored too. The rendering api needs to be more finely grained so things like linking geometry or adding new variable sets can be done separatly before anythings is rendered or when an object is prepared for rendering without an expensive configure call.
+
+# Quick recall
+
+The original problem was that it was not possible to inject msl shaders into a scene graph. The image for the very top just shows a scene exported from Blender using gltf. The engine imports that gltf scene and creates a scene graph. In that scene graph, the renderalbe nodes contain a default msl shader that can be used as was defined by the gltf file. But chaning the rendering pipeline to have a pre-z pass, a new shader needs to be injected into the scene graphs' renderable nodes so a pre-z pass render visitor can travel the scene graph and send the corresponding objects to render. Injecting the depth pass shader was not possible before, so now it is and the geometry contained in the renderable nodes is just attached to the msl depth pass shader so a pre-z pass can be deployed across the scene.
+
+So without this change, the user would have been required to load and compile the depth pass shader per renderable object. That is insane because msl compilation takes some time and shader compilation in general also takes some time. So that was not possible, the new feature needed to be done.
