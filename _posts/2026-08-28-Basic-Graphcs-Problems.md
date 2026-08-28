@@ -29,9 +29,9 @@ Initially I wanted to render multiple objects with the same shader. That was onl
 
 **render object:** A render object represents a api shader. Internlly in the backends, the msl shader is translated to an api shader. For an OpenGL 4 backend that would be a GLSL shader and for a Direct3D 11 backend, that would be a HLSL 5 shader. 
 
-** Geometry Link: ** A geometry link allows the user to link a previously configured geometry object to the shader for linkage. That means an id is generated for that geometry link which can be used for rendering. 
+**Geometry Link:** A geometry link allows the user to link a previously configured geometry object to the shader for linkage. That means an id is generated for that geometry link which can be used for rendering. 
 
-** Variable Set: ** A Variable Set allows the user to specify shader variables which can be changed during application run-time. So any shader variable can be changed using this interface.
+**Variable Set:** A Variable Set allows the user to specify shader variables which can be changed during application run-time. So any shader variable can be changed using this interface.
 
 The problem now was that if a msl object was desired to be used for multiple objects, e.g. a depth pass shader or a shadow pass shader, that shader needed to be configured multiple times. There was no possibility for the user to reuse a shader. Yes thats true. Originally, the design wasn't to render 3d scenes dynamically. Now it is and the engine needed support that feature.
 
@@ -41,6 +41,14 @@ Now it is possible to dynamically link a new geometry or a new variable set and 
 
 # Why is this important?
 
-Using just one msl for shadow or depth passes is very efficient. Every time a new object from the scene comes into viewable region, its geometry needs to be attached to the paricular depth pass msl shader along with its variable set so the geometry can be propery positioned in the view space for rendering into the depth buffer. There are more examples like default shaderer when you do just want to see something on the screen for example. 
+Using just one msl for shadow or depth passes is very efficient. Every time a new object from the scene comes into viewable region, its geometry needs to be attached to the paricular depth pass msl shader along with its variable set so the geometry can be propery positioned in the view space for rendering into the depth buffer. There are more examples like default shaders when you do just want to see something on the screen for testing for example. 
 
-Anyways, I can not go into further detail because it is very complex and this post would be very long nobody would read anyways. The puzzly will form into a broader picture later down the blog time. 
+Anyways, I can not go into further detail because it is very complex and this post would be very long nobody would read anyways. The puzzly will form into a broader picture later down the blog path. 
+
+It is also important because it just shows that the engine can initialze and release cycle through graphics objects without crash and with correcty display. It is very important to not leave any leaks after cleanup. 
+
+# Backends
+
+At the moment of writing, only the D3D11 backend was modified to support that feature. This feature also revealed more inefficiencies in the backend and lead me to fix some leaks too. 
+
+Another big time eater was the missed assignment of default values. msl supports assignment of default value to shader varialbes. Those defaults are set in the backend when the shader was compiled. Because of the old behaviour, defaults where assigned after the shader was complied, but with dynamic varialbe sets, the default values actually need to be assigned when the new variable set realized in the backend even if there is no shader recompilation.
